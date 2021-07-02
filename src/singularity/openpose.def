@@ -1,0 +1,8 @@
+Bootstrap: docker
+From: frankierr/openpose_containers:focal_nvcaffe
+
+%environment
+    . /.openpose_env
+
+%runscript
+    cd $OPENPOSE_SRC && python3 $BEGIN_EXEC_FILE "$@"
