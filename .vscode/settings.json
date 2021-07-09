@@ -1,0 +1,19 @@
+{
+    "python.analysis.extraPaths": [
+        "./src",
+        "./src/code",
+        "./src/code/utils",
+        "./src/code/pose"
+    ],
+    "python.pythonPath": "env/bin/python",
+    // "files.exclude": {
+    //     "container": true
+    // }
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/.hg/store/**": true,
+        "**/container/**": true
+    }
+}
