@@ -2,8 +2,10 @@ import argparse
 import os
 import subprocess
 import json
-from utils.video import ffprobe_video_info
+from config import MAX_PERSONS
+from utils.video import ffprobe_video_info, get_fps_from_file
 from pose.keypoints import get_all_keypoints, divide_keypoints_fn, divide_keypoints_count, divide_keypoints_position, arrange_persons
+from train.gestures_data import get_hand_movement_times
 
 parser = argparse.ArgumentParser("Arguments for using OpenPose")
 
@@ -59,6 +61,7 @@ assert os.access(output_dir, os.W_OK), \
     f"{output_dir} : Output Directory has to be writable"
 # output_video_dir = os.path.join(output_dir, "openpose_output_videos")
 # mkdir(output_video_dir)
+output_video_dirs_list = []
 elan_csv_files_list = []
 file_count = 0
 for ind, fil in enumerate(input_dir_list):
@@ -74,14 +77,15 @@ for ind, fil in enumerate(input_dir_list):
     file_count += 1
     output_video_filename = os.path.splitext(fil)[0]
     output_video_dir = os.path.join(output_dir, output_video_filename)
+    output_video_dirs_list.append(output_video_dir)
     output_video_path = os.path.join(output_video_dir,
                                      f"{output_video_filename}.avi")
     video_info_path = os.path.join(output_video_dir,
                                    f"{output_video_filename}_info.json")
     output_json_dir = os.path.join(output_video_dir,
                                    f"{output_video_filename}_json")
-    gestures_path = os.path.join(output_video_dir,
-                                 f"{output_video_filename}_keypoints.json")
+    keypoints_path = os.path.join(output_video_dir,
+                                  f"{output_video_filename}_keypoints.json")
     os.makedirs(output_video_dir, exist_ok=True)
     os.makedirs(output_json_dir, exist_ok=True)
     with open(video_info_path, "w") as vidf:
@@ -100,13 +104,17 @@ for ind, fil in enumerate(input_dir_list):
 
         print(f"Done running openpose on {fil}.")
 
-    if not os.path.exists(gestures_path):
+    if not os.path.exists(keypoints_path):
         keypoints = get_all_keypoints(output_json_dir)
         dkt = divide_keypoints_fn(keypoints)
         dkc = divide_keypoints_count(dkt)
-        dkp = divide_keypoints_position(dkc, video_info["streams"][0])
-        ap = arrange_persons(dkp, video_info["streams"][0])
-        with open(gestures_path, "w") as jf:
+        for stream in video_info["streams"]:
+            if stream["codec_type"] == "video":
+                info = stream
+                break
+        dkp = divide_keypoints_position(dkc, info)
+        ap = arrange_persons(dkp, info)
+        with open(keypoints_path, "w") as jf:
             json.dump(ap, jf)
 
         if args.action == "train":
@@ -115,17 +123,28 @@ for ind, fil in enumerate(input_dir_list):
                 if os.access(csv_file, os.R_OK):
                     elan_csv_files_list.append(csv_file)
                 else:
+                    elan_csv_files_list.append('')
                     print("Could not access CSV file for gesture training at" +
                           os.path.splitext(file_path)[0]+".csv")
             elif args.input_files:
                 if os.access(args.elan_csv_files[ind], os.R_OK):
                     elan_csv_files_list.append(args.elan_csv_files[ind])
                 else:
+                    elan_csv_files_list.append('')
                     print("Could not access CSV file for gesture training at" +
                           args.elan_csv_files[0])
 
-if not file_count:
-    os.rmdir(output_video_dir)
-
 # train, get csv data
-# if args.action == "train":
+if args.action == "train":
+    for elan_file, video_dir in list(zip(elan_csv_files_list, output_video_dirs_list)):
+        if elan_file:
+            video_info_file = os.path.join(video_dir,
+                                           f"{output_video_filename}_info.json")
+            keypoints_path = os.path.join(output_video_dir,
+                                          f"{output_video_filename}_keypoints.json")
+            hand_gesture_times = get_hand_movement_times(elan_file)
+            output_video_filename = os.path.basename(video_dir)
+            fps = get_fps_from_file(video_info_file)
+            with open(keypoints_path) as jf:
+                keypoints = dict(json.load(jf))
+            # iterate over keypoints

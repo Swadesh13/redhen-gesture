@@ -3,7 +3,8 @@
         "./src",
         "./src/code",
         "./src/code/utils",
-        "./src/code/pose"
+        "./src/code/pose",
+        "./src/code/train"
     ],
     "python.pythonPath": "env/bin/python",
     // "files.exclude": {

@@ -2,7 +2,7 @@ from typing import Dict, List, Tuple
 import json
 import os
 from .openpose_base import BODY_25_JOINTS
-from config import MAX_PERSONS, WINDOW_SIZE
+from config import MAX_PERSONS, WINDOW_SIZE, MAX_CHANGE_RATIO
 
 
 def get_body_25_keypoints_from_json(filename: str) -> List[Dict]:
@@ -118,7 +118,7 @@ def divide_keypoints_position(keypoints: Dict, video_info: Dict) -> Dict:
     vid_width = video_info["width"]
     vid_height = video_info["height"]
     # Maximum allowed change in position
-    max_allowed_change = (vid_height+vid_width)/2*0.02
+    max_allowed_change = (vid_height+vid_width)/2*MAX_CHANGE_RATIO
     for key in keys:
         for j, frame in enumerate(keypoints[key]):
             gesture_fn.append(frame)
@@ -148,24 +148,28 @@ def arrange_persons(keypoints: Dict, video_info: Dict) -> Dict:
     vid_width = video_info["width"]
     vid_height = video_info["height"]
     # Maximum allowed change in position
-    max_allowed_change = (vid_height+vid_width)/2*0.02
+    max_allowed_change = (vid_height+vid_width)/2*MAX_CHANGE_RATIO
     for key in keys:
+        start_frame_no = keypoints[key][0]["frame_no"]
+        end_frame_no = keypoints[key][-1]["frame_no"]
         if keypoints[key][0]["count"] == 1:
             person_keypoints = []
             for frame in keypoints[key]:
                 person_keypoints.append(frame["keypoints"][0])
-            start_frame_no = keypoints[key][0]["frame_no"]
-            end_frame_no = keypoints[key][-1]["frame_no"]
             gestures_dict[key] = {
                 "1": {
                     "person_keypoints": person_keypoints,
-                    "start": start_frame_no,
-                    "end": end_frame_no
                 }
             }
+            gestures_dict[key].update({
+                "start_frame": start_frame_no,
+                "end_frame": end_frame_no
+            })
 
         else:
             gestures_dict[key] = {}
+            start_frame_no = keypoints[key][0]["frame_no"]
+            end_frame_no = keypoints[key][-1]["frame_no"]
             for j, person_keypoint in enumerate(keypoints[key][0]["keypoints"]):
                 person_keypoints = []
                 person_keypoints.append(person_keypoint)
@@ -173,14 +177,14 @@ def arrange_persons(keypoints: Dict, video_info: Dict) -> Dict:
                     _, i = check_frames_continuous(
                         person_keypoints[-1], frame["keypoints"], max_allowed_change)
                     person_keypoints.append(frame["keypoints"][i])
-                start_frame_no = keypoints[key][0]["frame_no"]
-                end_frame_no = keypoints[key][-1]["frame_no"]
                 gestures_dict[key].update({
                     str(j+1): {
                         "person_keypoints": person_keypoints,
-                        "start": start_frame_no,
-                        "end": end_frame_no
                     }
                 })
+            gestures_dict[key].update({
+                "start_frame": start_frame_no,
+                "end_frame": end_frame_no
+            })
 
     return gestures_dict
