@@ -1,6 +1,7 @@
 from typing import Dict, List, Tuple
 import pandas as pd
-from config import MAX_PERSONS
+import numpy as np
+from config import MAX_PERSONS, REQUIRED_KEYPOINTS, WINDOW_SIZE
 from pose.openpose_base import BODY_25_JOINTS
 
 
@@ -27,7 +28,7 @@ def generate_dummy_keypoints() -> Dict:
 
 def arrange_train_data(keypoints: Dict, beg_end_times: List[Tuple], fps: float) -> Dict:
     data = {}
-    for key in list(keypoints.keys()):
+    for key in keypoints.keys():
         persons = list(keypoints[key].keys())
         persons.remove("start_frame")
         persons.remove("end_frame")
@@ -51,7 +52,7 @@ def arrange_train_data(keypoints: Dict, beg_end_times: List[Tuple], fps: float) 
         frame_division_gestures = list(zip(*gestures_xy))
         frames_dict = {}
         for i, frame in enumerate(frame_division_gestures):
-            frames_dict[start_frame + i] = {
+            frames_dict[str(start_frame + i)] = {
                 "frames": frame,
                 "gesture": False
             }
@@ -80,6 +81,27 @@ def arrange_train_data(keypoints: Dict, beg_end_times: List[Tuple], fps: float) 
                 end_at_frame_ind = int((list(data[key].keys()))[-1])
 
             for frame_no in range(begin_at_frame_ind, end_at_frame_ind+1):
-                data[key][frame_no]["gesture"] = True
+                data[key][str(frame_no)]["gesture"] = True
 
     return data
+
+
+def generate_npy_data(data: Dict):
+    npy_data = []
+    for key in data.keys():
+        for frame in list(data[key].keys())[:-WINDOW_SIZE+1]:
+            windows = []
+            target = str(int(frame)+WINDOW_SIZE-1)
+            for i in range(WINDOW_SIZE):
+                window = []
+                frame_no = str(int(frame)+i)
+                for person in data[key][frame_no]["frames"]:
+                    person_keypoints = []
+                    for keypoints in REQUIRED_KEYPOINTS:
+                        person_keypoints.extend(person[keypoints][:2])
+                    window.append(person_keypoints)
+                windows.append(window)
+            npy_data.append([int(target), np.array(windows),
+                            int(data[key][target]["gesture"])])
+    npy_data = np.array(npy_data, dtype=object)
+    return npy_data

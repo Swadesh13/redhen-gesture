@@ -12,6 +12,7 @@ def get_body_25_keypoints_from_json(filename: str) -> List[Dict]:
 
     for person in keypoints["people"]:
         pose_keypoints_2d = person["pose_keypoints_2d"]
+        # (x, y, confidence)
         keypoints_triplets = [(pose_keypoints_2d[i], pose_keypoints_2d[i+1],
                                pose_keypoints_2d[i+2]) for i in range(0, len(pose_keypoints_2d)-2, 3)]
         keypoints_triplets_body25_map = dict(

@@ -2,10 +2,10 @@ import argparse
 import os
 import subprocess
 import json
-from config import MAX_PERSONS
+import numpy as np
 from utils.video import ffprobe_video_info, get_fps_from_file
 from pose.keypoints import get_all_keypoints, divide_keypoints_fn, divide_keypoints_count, divide_keypoints_position, arrange_persons
-from train.gestures_data import get_hand_movement_times
+from train.gestures_data import arrange_train_data, generate_npy_data, get_hand_movement_times
 
 parser = argparse.ArgumentParser("Arguments for using OpenPose")
 
@@ -24,14 +24,16 @@ parser.add_argument("--output_dir", type=str, nargs=1,
 
 args = parser.parse_args()
 
-if not (args.action == "openpose_help" or ((args.input_dir or args.input_files) and args.output_dir)):
+action = args.action[0]
+
+if not (action == "openpose_help" or ((args.input_dir or args.input_files) and args.output_dir)):
     parser.error(
         "Atleast one of input and output files/directories or openpose_help must be mentioned as argument.")
 
 if args.input_dir and args.input_files:
     parser.error("input_dir and input_files cannot be used together.")
 
-if args.action == "train":
+if action == "train":
     if not (args.input_files and args.elan_csv_files):
         parser.error("input_files requires elan_csv_files while training.")
 
@@ -41,7 +43,7 @@ assert len(args.input_files) == len(args.elan_csv_files), \
 ENV = dict(os.environ)
 OPENPOSE_BIN = ENV["OPENPOSE_BIN"]
 
-if args.action == "openpose_help":
+if action == "openpose_help":
     openpose_help_args = (f"{OPENPOSE_BIN}", "--help")
     proc = subprocess.Popen(openpose_help_args, stdout=subprocess.PIPE)
     proc.wait()
@@ -55,12 +57,12 @@ if args.input_dir:
         f"{input_dir} : Input Directory has to be readable"
     input_dir_list = os.listdir(input_dir)
 elif args.input_files:
+    assert os.access(args.input_files[0], os.R_OK), \
+        f"{args.input_files[0]} : Input File has to be readable"
     input_dir_list = args.input_files
 
 assert os.access(output_dir, os.W_OK), \
     f"{output_dir} : Output Directory has to be writable"
-# output_video_dir = os.path.join(output_dir, "openpose_output_videos")
-# mkdir(output_video_dir)
 output_video_dirs_list = []
 elan_csv_files_list = []
 file_count = 0
@@ -70,7 +72,7 @@ for ind, fil in enumerate(input_dir_list):
     elif args.input_files:
         file_path = fil
         fil = os.path.basename(fil)
-    try:    # Check if file is a video file by running ffmpeg on it
+    try:    # Check if file is a video file by running ffprobe on it
         video_info = ffprobe_video_info(file_path)
     except:
         continue
@@ -90,6 +92,7 @@ for ind, fil in enumerate(input_dir_list):
     os.makedirs(output_json_dir, exist_ok=True)
     with open(video_info_path, "w") as vidf:
         vidf.write(video_info)
+    video_info = json.loads(video_info)
     if not os.path.exists(output_video_path):
         print(
             f"Running OpenPose on {fil}. Get the output video file at {output_video_path} and json files at {output_json_dir}")
@@ -117,34 +120,44 @@ for ind, fil in enumerate(input_dir_list):
         with open(keypoints_path, "w") as jf:
             json.dump(ap, jf)
 
-        if args.action == "train":
-            if args.input_dir:
-                csv_file = os.path.splitext(file_path)[0]+".csv"
-                if os.access(csv_file, os.R_OK):
-                    elan_csv_files_list.append(csv_file)
-                else:
-                    elan_csv_files_list.append('')
-                    print("Could not access CSV file for gesture training at" +
-                          os.path.splitext(file_path)[0]+".csv")
-            elif args.input_files:
-                if os.access(args.elan_csv_files[ind], os.R_OK):
-                    elan_csv_files_list.append(args.elan_csv_files[ind])
-                else:
-                    elan_csv_files_list.append('')
-                    print("Could not access CSV file for gesture training at" +
-                          args.elan_csv_files[0])
+    if action == "train":
+        if args.input_dir:
+            csv_file = os.path.splitext(file_path)[0]+".csv"
+            if os.access(csv_file, os.R_OK):
+                elan_csv_files_list.append(csv_file)
+            else:
+                elan_csv_files_list.append('')
+                print("Could not access CSV file for gesture training at" +
+                      os.path.splitext(file_path)[0]+".csv")
+        elif args.input_files:
+            if os.access(args.elan_csv_files[ind], os.R_OK):
+                elan_csv_files_list.append(args.elan_csv_files[ind])
+            else:
+                elan_csv_files_list.append('')
+                print("Could not access CSV file for gesture training at" +
+                      args.elan_csv_files[0])
 
 # train, get csv data
-if args.action == "train":
+if action == "train":
+    train_data_paths = []
     for elan_file, video_dir in list(zip(elan_csv_files_list, output_video_dirs_list)):
         if elan_file:
+            output_video_filename = os.path.basename(video_dir)
             video_info_file = os.path.join(video_dir,
                                            f"{output_video_filename}_info.json")
-            keypoints_path = os.path.join(output_video_dir,
+            keypoints_path = os.path.join(video_dir,
                                           f"{output_video_filename}_keypoints.json")
+            npy_file = os.path.join(video_dir,
+                                    f"{output_video_filename}_npy.npy")
             hand_gesture_times = get_hand_movement_times(elan_file)
-            output_video_filename = os.path.basename(video_dir)
             fps = get_fps_from_file(video_info_file)
             with open(keypoints_path) as jf:
                 keypoints = dict(json.load(jf))
-            # iterate over keypoints
+            csv = get_hand_movement_times(elan_file)
+            fps = get_fps_from_file(video_info_file)
+            data = arrange_train_data(keypoints, csv, fps)
+            # Generates trainable data in numpy
+            npy = generate_npy_data(data)
+            with open(npy_file, "wb") as npyf:
+                np.save(npy_file, npy)
+            train_data_paths.append(npy_file)
