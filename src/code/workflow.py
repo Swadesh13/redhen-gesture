@@ -6,6 +6,7 @@ import numpy as np
 from utils.video import ffprobe_video_info, get_fps_from_file
 from pose.keypoints import get_all_keypoints, divide_keypoints_fn, divide_keypoints_count, divide_keypoints_position, arrange_persons
 from train.gestures_data import arrange_train_data, generate_npy_data, get_hand_movement_times
+from config import MAX_CHANGE_RATIO, MAX_PERSONS, WINDOW_SIZE
 
 parser = argparse.ArgumentParser("Arguments for using OpenPose")
 
@@ -19,8 +20,13 @@ parser.add_argument('--elan_csv_files', type=str, nargs='+',
                     help="complete path to elan_csv files (one or more) in same order as input video files")
 parser.add_argument("--output_dir", type=str, nargs=1,
                     help="writable output directory for storing output/intermediate files")
-# parser.add_argument("-openpose_help", action="store_true",
-#                     help="Get Help message for OpenPose module")
+parser.add_argument("--window_size", type=int, nargs=1,
+                    help="Window Size for generating time-series data")
+parser.add_argument("--max_persons", type=int, nargs=1,
+                    help="max persons acceptable in a frame")
+parser.add_argument("--diff_ratio", type=float, nargs=1,
+                    help="Ratio of (height+width)/2 that will be maximum difference between consecutive frames for the same person")
+
 
 args = parser.parse_args()
 
@@ -34,11 +40,18 @@ if args.input_dir and args.input_files:
     parser.error("input_dir and input_files cannot be used together.")
 
 if action == "train":
-    if not (args.input_files and args.elan_csv_files):
+    if (not args.input_files) ^ (not args.elan_csv_files):
         parser.error("input_files requires elan_csv_files while training.")
 
 assert len(args.input_files) == len(args.elan_csv_files), \
     "Number of video files != Number of elan csv files"
+
+if args.window_size:
+    WINDOW_SIZE = args.window_size[0]
+if args.max_persons:
+    MAX_PERSONS = args.max_persons[0]
+if args.diff_ratio:
+    MAX_CHANGE_RATIO = args.diff_ratio[0]
 
 ENV = dict(os.environ)
 OPENPOSE_BIN = ENV["OPENPOSE_BIN"]
@@ -108,15 +121,16 @@ for ind, fil in enumerate(input_dir_list):
         print(f"Done running openpose on {fil}.")
 
     if not os.path.exists(keypoints_path):
-        keypoints = get_all_keypoints(output_json_dir)
-        dkt = divide_keypoints_fn(keypoints)
-        dkc = divide_keypoints_count(dkt)
+        keypoints = get_all_keypoints(output_json_dir, MAX_PERSONS)
+        dkt = divide_keypoints_fn(keypoints, WINDOW_SIZE)
+        dkc = divide_keypoints_count(dkt, WINDOW_SIZE)
         for stream in video_info["streams"]:
             if stream["codec_type"] == "video":
                 info = stream
                 break
-        dkp = divide_keypoints_position(dkc, info)
-        ap = arrange_persons(dkp, info)
+        dkp = divide_keypoints_position(
+            dkc, info, WINDOW_SIZE, MAX_CHANGE_RATIO)
+        ap = arrange_persons(dkp, info, MAX_CHANGE_RATIO)
         with open(keypoints_path, "w") as jf:
             json.dump(ap, jf)
 
@@ -140,6 +154,8 @@ for ind, fil in enumerate(input_dir_list):
 # train, get csv data
 if action == "train":
     train_data_paths = []
+    npy_files_path = os.path.join(output_dir, "npy_files")
+    os.makedirs(npy_files_path, exist_ok=True)
     for elan_file, video_dir in list(zip(elan_csv_files_list, output_video_dirs_list)):
         if elan_file:
             output_video_filename = os.path.basename(video_dir)
@@ -149,15 +165,18 @@ if action == "train":
                                           f"{output_video_filename}_keypoints.json")
             npy_file = os.path.join(video_dir,
                                     f"{output_video_filename}_npy.npy")
+            npy_file_ = os.path.join(
+                npy_files_path, f"{output_video_filename}_npy.npy")
             hand_gesture_times = get_hand_movement_times(elan_file)
             fps = get_fps_from_file(video_info_file)
             with open(keypoints_path) as jf:
                 keypoints = dict(json.load(jf))
             csv = get_hand_movement_times(elan_file)
             fps = get_fps_from_file(video_info_file)
-            data = arrange_train_data(keypoints, csv, fps)
+            data = arrange_train_data(keypoints, csv, fps, MAX_PERSONS)
             # Generates trainable data in numpy
-            npy = generate_npy_data(data)
+            npy = generate_npy_data(data, WINDOW_SIZE)
             with open(npy_file, "wb") as npyf:
                 np.save(npy_file, npy)
+                np.save(npy_file_, npy)
             train_data_paths.append(npy_file)

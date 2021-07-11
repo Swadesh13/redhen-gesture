@@ -1,7 +1,7 @@
 from typing import Dict, List, Tuple
 import pandas as pd
 import numpy as np
-from config import MAX_PERSONS, REQUIRED_KEYPOINTS, WINDOW_SIZE
+from config import REQUIRED_KEYPOINTS
 from pose.openpose_base import BODY_25_JOINTS
 
 
@@ -26,7 +26,7 @@ def generate_dummy_keypoints() -> Dict:
     return dummy
 
 
-def arrange_train_data(keypoints: Dict, beg_end_times: List[Tuple], fps: float) -> Dict:
+def arrange_train_data(keypoints: Dict, beg_end_times: List[Tuple], fps: float, MAX_PERSONS: int) -> Dict:
     data = {}
     for key in keypoints.keys():
         persons = list(keypoints[key].keys())
@@ -86,7 +86,7 @@ def arrange_train_data(keypoints: Dict, beg_end_times: List[Tuple], fps: float) 
     return data
 
 
-def generate_npy_data(data: Dict):
+def generate_npy_data(data: Dict, WINDOW_SIZE: int, ):
     npy_data = []
     for key in data.keys():
         for frame in list(data[key].keys())[:-WINDOW_SIZE+1]:
@@ -99,9 +99,9 @@ def generate_npy_data(data: Dict):
                     person_keypoints = []
                     for keypoints in REQUIRED_KEYPOINTS:
                         person_keypoints.extend(person[keypoints][:2])
-                    window.append(person_keypoints)
-                windows.append(window)
-            npy_data.append([int(target), np.array(windows),
+                    window.append(np.array(person_keypoints, dtype=np.float16))
+                windows.append(np.array(window, dtype=np.float16))
+            npy_data.append([int(target), np.array(windows, dtype=np.float16),
                             int(data[key][target]["gesture"])])
     npy_data = np.array(npy_data, dtype=object)
     return npy_data

@@ -2,7 +2,6 @@ from typing import Dict, List, Tuple
 import json
 import os
 from .openpose_base import BODY_25_JOINTS
-from config import MAX_PERSONS, WINDOW_SIZE, MAX_CHANGE_RATIO
 
 
 def get_body_25_keypoints_from_json(filename: str) -> List[Dict]:
@@ -22,7 +21,7 @@ def get_body_25_keypoints_from_json(filename: str) -> List[Dict]:
     return body_25_keypoints
 
 
-def get_all_keypoints(folder: str) -> Dict:
+def get_all_keypoints(folder: str, MAX_PERSONS: int) -> Dict:
     json_files = os.listdir(folder)
     all_keypoints = {}
     for jfile in json_files:
@@ -41,7 +40,7 @@ def get_all_keypoints(folder: str) -> Dict:
 
 
 # Divide on the basis of missing frames (due to multiple persons with no gesture annotations)
-def divide_keypoints_fn(keypoints: Dict) -> Dict:
+def divide_keypoints_fn(keypoints: Dict, WINDOW_SIZE: int) -> Dict:
     keys = list(sorted(keypoints.keys()))
     gestures_dict = {}
     gesture_fn = []
@@ -67,7 +66,7 @@ def divide_keypoints_fn(keypoints: Dict) -> Dict:
 
 
 # Divide on the basis of count of perons in the frame (change of persons -> change in frame)
-def divide_keypoints_count(keypoints: Dict) -> Dict:
+def divide_keypoints_count(keypoints: Dict, WINDOW_SIZE: int) -> Dict:
     keys = list(keypoints.keys())
     gestures_dict = {}
     gesture_fn = []
@@ -110,7 +109,7 @@ def check_frames_continuous(keypoint1: Dict, keypoint2: List, max_diff: float) -
     return False, i
 
 
-def divide_keypoints_position(keypoints: Dict, video_info: Dict) -> Dict:
+def divide_keypoints_position(keypoints: Dict, video_info: Dict, WINDOW_SIZE: int, MAX_CHANGE_RATIO: float) -> Dict:
     keys = list(keypoints.keys())
     gestures_dict = {}
     gesture_fn = []
@@ -142,7 +141,7 @@ def divide_keypoints_position(keypoints: Dict, video_info: Dict) -> Dict:
 
 
 # Arrange the keypoints per person (again compare the neck and nose keypoints)
-def arrange_persons(keypoints: Dict, video_info: Dict) -> Dict:
+def arrange_persons(keypoints: Dict, video_info: Dict, MAX_CHANGE_RATIO: float) -> Dict:
     keys = list(keypoints.keys())
     gestures_dict = {}
     gesture_fn = []
