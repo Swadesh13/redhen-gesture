@@ -4,4 +4,4 @@ export OPENPOSE=$OPENPOSE_SRC/build
 export OPENPOSE_BIN=$OPENPOSE/examples/openpose/openpose.bin
 export PYTHONPATH="$OPENPOSE/python:$PYTHONPATH"
 export OPENPOSE_MODELS=/opt/openpose_models
-export BEGIN_EXEC_FILE=$OPENPOSE_SRC/workflow.py
+export BEGIN_EXEC_FILE=$OPENPOSE_SRC/redhen-gesture/src/code/workflow.py

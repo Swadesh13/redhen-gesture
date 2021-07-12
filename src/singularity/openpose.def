@@ -2,7 +2,7 @@ Bootstrap: docker
 From: frankierr/openpose_containers:focal_nvcaffe
 
 %post
-    pip install numpy==1.21.0 pandas==1.2.5
+    pip3 install numpy==1.21.0 pandas==1.2.5
 
 %environment
     . /.openpose_env
