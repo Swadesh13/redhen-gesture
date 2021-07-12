@@ -43,14 +43,16 @@ if action == "train":
     if (not args.input_files) ^ (not args.elan_csv_files):
         parser.error("input_files requires elan_csv_files while training.")
 
-assert len(args.input_files) == len(args.elan_csv_files), \
-    "Number of video files != Number of elan csv files"
+    if args.input_files:
+        assert len(args.input_files) == len(args.elan_csv_files), \
+            "Number of video files != Number of elan csv files"
 
 if args.window_size:
     WINDOW_SIZE = args.window_size[0]
 if args.max_persons:
     MAX_PERSONS = args.max_persons[0]
 if args.diff_ratio:
+    assert args.diff_ratio[0] < 1
     MAX_CHANGE_RATIO = args.diff_ratio[0]
 
 ENV = dict(os.environ)
@@ -106,7 +108,7 @@ for ind, fil in enumerate(input_dir_list):
     with open(video_info_path, "w") as vidf:
         vidf.write(video_info)
     video_info = json.loads(video_info)
-    if not os.path.exists(output_video_path):
+    if not os.listdir(output_json_dir):
         print(
             f"Running OpenPose on {fil}. Get the output video file at {output_video_path} and json files at {output_json_dir}")
         openpose_args = (f"{OPENPOSE_BIN}", "--video", f"{file_path}", "--display", "0",
@@ -120,19 +122,20 @@ for ind, fil in enumerate(input_dir_list):
 
         print(f"Done running openpose on {fil}.")
 
-    if not os.path.exists(keypoints_path):
-        keypoints = get_all_keypoints(output_json_dir, MAX_PERSONS)
-        dkt = divide_keypoints_fn(keypoints, WINDOW_SIZE)
-        dkc = divide_keypoints_count(dkt, WINDOW_SIZE)
-        for stream in video_info["streams"]:
-            if stream["codec_type"] == "video":
-                info = stream
-                break
-        dkp = divide_keypoints_position(
-            dkc, info, WINDOW_SIZE, MAX_CHANGE_RATIO)
-        ap = arrange_persons(dkp, info, MAX_CHANGE_RATIO)
-        with open(keypoints_path, "w") as jf:
-            json.dump(ap, jf)
+    keypoints = get_all_keypoints(output_json_dir, MAX_PERSONS)
+    dkt = divide_keypoints_fn(keypoints, WINDOW_SIZE)
+    dkc = divide_keypoints_count(dkt, WINDOW_SIZE)
+    for stream in video_info["streams"]:
+        if stream["codec_type"] == "video":
+            info = stream
+            break
+    dkp = divide_keypoints_position(
+        dkc, info, WINDOW_SIZE, MAX_CHANGE_RATIO)
+    ap = arrange_persons(dkp, info, MAX_CHANGE_RATIO)
+    with open(keypoints_path, "w") as jf:
+        json.dump(ap, jf)
+
+    print(f"Created keypoints for {file_path}")
 
     if action == "train":
         if args.input_dir:
@@ -164,9 +167,9 @@ if action == "train":
             keypoints_path = os.path.join(video_dir,
                                           f"{output_video_filename}_keypoints.json")
             npy_file = os.path.join(video_dir,
-                                    f"{output_video_filename}_npy.npy")
-            npy_file_ = os.path.join(
-                npy_files_path, f"{output_video_filename}_npy.npy")
+                                    f"{output_video_filename}_npy_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
+            npy_file_ = os.path.join(npy_files_path,
+                                     f"{output_video_filename}_npy_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
             hand_gesture_times = get_hand_movement_times(elan_file)
             fps = get_fps_from_file(video_info_file)
             with open(keypoints_path) as jf:
@@ -180,3 +183,5 @@ if action == "train":
                 np.save(npy_file, npy)
                 np.save(npy_file_, npy)
             train_data_paths.append(npy_file)
+
+            print(f"Created train npy file at {npy_file}")

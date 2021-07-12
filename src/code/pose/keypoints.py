@@ -70,10 +70,12 @@ def divide_keypoints_count(keypoints: Dict, WINDOW_SIZE: int) -> Dict:
     keys = list(keypoints.keys())
     gestures_dict = {}
     gesture_fn = []
-    frame_count = 0
-    gesture_count = 1
     for key in keys:
+        gesture_count = 1
+        frame_count = 0
         for j, frame in enumerate(keypoints[key]):
+            if frame["count"] == 0:
+                continue
             gesture_fn.append(frame)
             frame_count += 1
             if j < len(keypoints[key])-1:
@@ -89,7 +91,6 @@ def divide_keypoints_count(keypoints: Dict, WINDOW_SIZE: int) -> Dict:
                     gesture_count += 1
                     frame_count = 0
                     gesture_fn = []
-        gesture_count = 1
     return gestures_dict
 
 
