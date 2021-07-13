@@ -1,3 +1,5 @@
+from datetime import datetime
+from time import time
 from typing import Dict, List, Tuple
 import json
 import os
@@ -6,7 +8,11 @@ from .openpose_base import BODY_25_JOINTS
 
 def get_body_25_keypoints_from_json(filename: str) -> List[Dict]:
     with open(filename) as jsonf:
-        keypoints = json.load(jsonf)
+        try:
+            keypoints = json.load(jsonf)
+        except ValueError:
+            return None
+
     body_25_keypoints = []
 
     for person in keypoints["people"]:
@@ -28,7 +34,7 @@ def get_all_keypoints(folder: str, MAX_PERSONS: int) -> Dict:
         if jfile.endswith("json"):
             abspath = os.path.join(folder, jfile)
             body_25_keypoints = get_body_25_keypoints_from_json(abspath)
-            if len(body_25_keypoints) <= MAX_PERSONS:
+            if body_25_keypoints and len(body_25_keypoints) <= MAX_PERSONS:
                 # ! Remove those with no. of persons > threshold, say 6
                 fn = jfile.split("_")[-2]
                 body_25_keypoints_dict = {}
@@ -51,13 +57,13 @@ def divide_keypoints_fn(keypoints: Dict, WINDOW_SIZE: int) -> Dict:
         frame_count += 1
         if i < len(keys)-1:
             if keypoints[key]["frame_no"] != keypoints[keys[i+1]]["frame_no"] - 1:
-                if frame_count >= WINDOW_SIZE:   # window size
+                if frame_count >= WINDOW_SIZE:
                     gestures_dict[str(gesture_count)] = gesture_fn
                     gesture_count += 1
                     frame_count = 0
                     gesture_fn = []
         else:   # for the last value
-            if frame_count >= WINDOW_SIZE:   # window size
+            if frame_count >= WINDOW_SIZE:
                 gestures_dict[str(gesture_count)] = gesture_fn
                 gesture_count += 1
                 frame_count = 0
@@ -80,13 +86,13 @@ def divide_keypoints_count(keypoints: Dict, WINDOW_SIZE: int) -> Dict:
             frame_count += 1
             if j < len(keypoints[key])-1:
                 if frame["count"] != keypoints[key][j+1]["count"]:
-                    if frame_count >= WINDOW_SIZE:   # window size
+                    if frame_count >= WINDOW_SIZE:
                         gestures_dict[key+"_"+str(gesture_count)] = gesture_fn
                         gesture_count += 1
                         frame_count = 0
                         gesture_fn = []
             else:   # for the last value
-                if frame_count >= WINDOW_SIZE:   # window size
+                if frame_count >= WINDOW_SIZE:
                     gestures_dict[key+"_"+str(gesture_count)] = gesture_fn
                     gesture_count += 1
                     frame_count = 0
@@ -126,13 +132,13 @@ def divide_keypoints_position(keypoints: Dict, video_info: Dict, WINDOW_SIZE: in
             frame_count += 1
             if j < len(keypoints[key])-1:
                 if not check_frames_continuous(frame["keypoints"][0], keypoints[key][j+1]["keypoints"], max_allowed_change)[0]:
-                    if frame_count >= WINDOW_SIZE:   # window size
+                    if frame_count >= WINDOW_SIZE:
                         gestures_dict[key+"_"+str(gesture_count)] = gesture_fn
                         gesture_count += 1
                         frame_count = 0
                         gesture_fn = []
             else:   # for the last value
-                if frame_count >= WINDOW_SIZE:   # window size
+                if frame_count >= WINDOW_SIZE:
                     gestures_dict[key+"_"+str(gesture_count)] = gesture_fn
                     gesture_count += 1
                     frame_count = 0
@@ -189,3 +195,20 @@ def arrange_persons(keypoints: Dict, video_info: Dict, MAX_CHANGE_RATIO: float) 
             })
 
     return gestures_dict
+
+
+def get_keypoints(output_json_dir: str, keypoints_path: str, video_info: Dict, WINDOW_SIZE: int, MAX_PERSONS: int, MAX_CHANGE_RATIO: float):
+    keypoints = get_all_keypoints(output_json_dir, MAX_PERSONS)
+    dkt = divide_keypoints_fn(keypoints, WINDOW_SIZE)
+    dkc = divide_keypoints_count(dkt, WINDOW_SIZE)
+    for stream in video_info["streams"]:
+        if stream["codec_type"] == "video":
+            info = stream
+            break
+    dkp = divide_keypoints_position(
+        dkc, info, WINDOW_SIZE, MAX_CHANGE_RATIO)
+    ap = arrange_persons(dkp, info, MAX_CHANGE_RATIO)
+    with open(keypoints_path, "w") as jf:
+        json.dump(ap, jf)
+    dt = datetime.fromtimestamp(int(time()))
+    print(f"[{dt}] Created keypoints at {keypoints_path}")

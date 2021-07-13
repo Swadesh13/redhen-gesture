@@ -86,7 +86,40 @@ def arrange_train_data(keypoints: Dict, beg_end_times: List[Tuple], fps: float, 
     return data
 
 
-def generate_npy_data(data: Dict, WINDOW_SIZE: int, ):
+def arrange_detect_data(keypoints: Dict, MAX_PERSONS: int) -> Dict:
+    data = {}
+    for key in keypoints.keys():
+        persons = list(keypoints[key].keys())
+        persons.remove("start_frame")
+        persons.remove("end_frame")
+        count_persons = len(persons)
+        gestures_xy = []
+        start_frame, end_frame = keypoints[key]["start_frame"], keypoints[key]["end_frame"]
+        for per_ind in range(1, count_persons+1):
+            per_str = str(per_ind)
+            gestures_xy.append(keypoints[key][per_str]["person_keypoints"])
+        # dummy to always have MAX_PERSONS (training to be done in matrices (Required_keypoints x Max_persons x window))
+        dummy = generate_dummy_keypoints()
+        dummy_frames_list = []
+        for j in range(start_frame, end_frame+1):
+            dummy_frames_list.append(dummy)
+
+        for i in range(MAX_PERSONS - count_persons):
+            gestures_xy.append(dummy_frames_list)
+
+        frame_division_gestures = list(zip(*gestures_xy))
+        frames_dict = {}
+        for i, frame in enumerate(frame_division_gestures):
+            frames_dict[str(start_frame + i)] = {
+                "frames": frame,
+                "gesture": False
+            }
+        data[key] = frames_dict
+
+    return data
+
+
+def generate_npy_data_train(data: Dict, WINDOW_SIZE: int, ):
     npy_data = []
     for key in data.keys():
         for frame in list(data[key].keys())[:-WINDOW_SIZE+1]:
@@ -103,5 +136,25 @@ def generate_npy_data(data: Dict, WINDOW_SIZE: int, ):
                 windows.append(np.array(window, dtype=np.float16))
             npy_data.append([int(target), np.array(windows, dtype=np.float16),
                             int(data[key][target]["gesture"])])
+    npy_data = np.array(npy_data, dtype=object)
+    return npy_data
+
+
+def generate_npy_data_detect(data: Dict, WINDOW_SIZE: int, ):
+    npy_data = []
+    for key in data.keys():
+        for frame in list(data[key].keys())[:-WINDOW_SIZE+1]:
+            windows = []
+            target = str(int(frame)+WINDOW_SIZE-1)
+            for i in range(WINDOW_SIZE):
+                window = []
+                frame_no = str(int(frame)+i)
+                for person in data[key][frame_no]["frames"]:
+                    person_keypoints = []
+                    for keypoints in REQUIRED_KEYPOINTS:
+                        person_keypoints.extend(person[keypoints][:2])
+                    window.append(np.array(person_keypoints, dtype=np.float16))
+                windows.append(np.array(window, dtype=np.float16))
+            npy_data.append([int(target), np.array(windows, dtype=np.float16)])
     npy_data = np.array(npy_data, dtype=object)
     return npy_data
