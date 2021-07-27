@@ -10,7 +10,8 @@ from utils.paths import generate_video_paths
 from pose.openpose_base import run_openpose
 from pose.keypoints import get_keypoints
 from data.gestures_data import arrange_detect_data, arrange_train_data, generate_npy_data_detect, generate_npy_data_train, get_hand_movement_times
-from config import MAX_CHANGE_RATIO, MAX_PERSONS, WINDOW_SIZE
+from config import MAX_CHANGE_RATIO, MAX_PERSONS, WINDOW_SIZE, MODEL_PATH
+from model.detect import run_detection
 
 parser = argparse.ArgumentParser("Arguments for using OpenPose")
 
@@ -30,6 +31,8 @@ parser.add_argument("--max_persons", type=int, nargs=1,
                     help="max persons acceptable in a frame")
 parser.add_argument("--diff_ratio", type=float, nargs=1,
                     help="Ratio of (height+width)/2 that will be maximum difference between consecutive frames for the same person")
+parser.add_argument("--detection_threshold", type=float, nargs=1, default=0.5,
+                    help="max persons acceptable in a frame")
 
 
 args = parser.parse_args()
@@ -138,7 +141,7 @@ detect_data_paths = []
 if action == "train":
     npy_files_path = os.path.join(output_dir, "npy_files")
     os.makedirs(npy_files_path, exist_ok=True)
-    for elan_file, video_dir, keypoints_path in list(zip(elan_csv_files_list, output_video_dirs_list, all_keypoints_paths)):
+    for elan_file, video_dir, keypoints_path in zip(elan_csv_files_list, output_video_dirs_list, all_keypoints_paths):
         if elan_file:
             output_video_filename = os.path.basename(video_dir)
             video_info_file = os.path.join(video_dir,
@@ -149,7 +152,7 @@ if action == "train":
                                      f"{output_video_filename}_npy_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
             if os.path.exists(npy_file) and os.path.exists(npy_file_):
                 train_data_paths.append(npy_file)
-                print("All files available")
+                print(f"{npy_file} available")
             else:
                 with open(keypoints_path) as jf:
                     keypoints = dict(json.load(jf))
@@ -169,7 +172,7 @@ if action == "train":
 elif action == "detect":
     npy_files_path = os.path.join(output_dir, "npy_files")
     os.makedirs(npy_files_path, exist_ok=True)
-    for video_dir, keypoints_path in list(zip(output_video_dirs_list, all_keypoints_paths)):
+    for video_dir, keypoints_path in zip(output_video_dirs_list, all_keypoints_paths):
         output_video_filename = os.path.basename(video_dir)
         video_info_file = os.path.join(video_dir,
                                        f"{output_video_filename}_info.json")
@@ -179,7 +182,7 @@ elif action == "detect":
                                  f"{output_video_filename}_npy_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
         if os.path.exists(npy_file) and os.path.exists(npy_file_):
             detect_data_paths.append(npy_file)
-            print("All files available")
+            print(f"{npy_file} available")
         else:
             with open(keypoints_path) as jf:
                 keypoints = dict(json.load(jf))
@@ -193,3 +196,22 @@ elif action == "detect":
             dt = datetime.fromtimestamp(int(time()))
             print(f"[{dt}] Created train npy file at {npy_file}")
     print(f"Completed data generation for {len(detect_data_paths)} files")
+
+    for video_dir, detect_data_path in zip(output_video_dirs_list, detect_data_paths):
+        output_video_filename = os.path.basename(video_dir)
+        openpose_video_path = os.path.join(video_dir,
+                                           f"{output_video_filename}.avi")
+        output_video_path = os.path.join(video_dir,
+                                         f"{output_video_filename}_output.avi")
+        pred_df_path = os.path.join(video_dir,
+                                    f"{output_video_filename}_preds-df_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.csv")
+
+        with open(detect_data_path, "rb") as npf:
+            data = np.load(npf, allow_pickle=True)
+        x = []
+        for frame, d in data:
+            x.append(np.array([d], dtype=np.float32))   # 1 channel required
+        run_detection(MODEL_PATH, x, pred_df_path, openpose_video_path,
+                      output_video_path, args.detection_threshold)
+
+    print(f"Completed detection for {len(detect_data_paths)} files")
