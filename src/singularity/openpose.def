@@ -2,9 +2,16 @@ Bootstrap: docker
 From: frankierr/openpose_containers:focal_nvcaffe
 
 %post
-    pip3 install numpy==1.21.0 pandas==1.2.5
+    apt-get install -y dirmngr
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-repo-ubuntu1804_10.1.105-1_amd64.deb
+    dpkg -i cuda-repo-ubuntu1804_10.1.105-1_amd64.deb
+    apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
+    apt-get update
+    apt-get install -y cuda-libraries-10-1
+    pip3 install tensorflow-gpu==2.2.0 pandas==1.2.5 opencv-python numpy
 
 %environment
+    export PATH=/usr/local/cuda-10.1/bin${PATH:+:${PATH}}
     . /.openpose_env
 
 %runscript

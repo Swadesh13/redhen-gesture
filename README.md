@@ -13,3 +13,4 @@ The `src` directory contains all the code. There is a `code` directory for pytho
 * Changed the `/.openpose_env` to add the workflow.py file path.
 * Openpose searches for `models` directory at `OPENPOSE_SRC` i.e. base OpenPose folder. So, copied the directory `/home/opt/openpose_models` to `/home/opt/openpose/models`
 * Added the this github repo to `/home/opt/openpose/`.
+* Add `model.h5` to `/opt/openpose/redhen-gesture/src/model.h5` for detection / training.

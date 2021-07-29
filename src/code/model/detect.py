@@ -11,12 +11,12 @@ def load_model(filepath: str):
 def detect_on_np_data(model, data):
     assert model.input_shape[2:] == np.array(data).shape[2:], \
         "model input shape and data shape do not match!"
-    return model.predict(np.array(data, dtype=np.float32), verbose=1)
+    return model.predict(np.array(data, dtype=np.float32), batch_size=1, verbose=1)
 
 
-def compile_results(data, preds, df_filepath, threshold=0.5) -> list:
+def compile_results(frames, preds, df_filepath, threshold=0.5) -> list:
     df_data = []
-    for [frame, d], result in zip(data, preds):
+    for [frame, d], result in zip(frames, preds):
         df_data.append([frame,  result[0] > threshold])
 
     df = pd.DataFrame(df_data, columns=["Frame No.", "Gesture Prediction"])
@@ -60,8 +60,8 @@ def visualize_prediction(input_video_path, output_video_path, preds_df):
     cap.release()
 
 
-def run_detection(model_path, data, df_filepath, input_video_path, output_video_path, threshold=0.5):
+def run_detection(model_path, data, frames, df_filepath, input_video_path, output_video_path, threshold=0.5):
     model = load_model(model_path)
     results = detect_on_np_data(model, data)
-    preds = compile_results(data, results, df_filepath, threshold)
+    preds = compile_results(frames, results, df_filepath, threshold)
     visualize_prediction(input_video_path, output_video_path, preds)

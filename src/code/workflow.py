@@ -211,7 +211,7 @@ elif action == "detect":
         x = []
         for frame, d in data:
             x.append(np.array([d], dtype=np.float32))   # 1 channel required
-        run_detection(MODEL_PATH, x, pred_df_path, openpose_video_path,
+        run_detection(MODEL_PATH, x, data, pred_df_path, openpose_video_path,
                       output_video_path, args.detection_threshold)
 
     print(f"Completed detection for {len(detect_data_paths)} files")

@@ -1,5 +1,5 @@
 MAX_PERSONS = 6
-WINDOW_SIZE = 3
+WINDOW_SIZE = 5
 MAX_CHANGE_RATIO = 0.025
 REQUIRED_KEYPOINTS = ["neck", "right shoulder", "right elbow", "right wrist",
                       "left shoulder", "left elbow", "left wrist", ]
