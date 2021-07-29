@@ -14,7 +14,7 @@ def detect_on_np_data(model, data):
     return model.predict(np.array(data, dtype=np.float32), batch_size=1, verbose=1)
 
 
-def compile_results(frames, preds, df_filepath, threshold=0.5) -> list:
+def compile_results(frames, preds, df_filepath, threshold=0.5):
     df_data = []
     for [frame, d], result in zip(frames, preds):
         df_data.append([frame,  result[0] > threshold])
@@ -22,7 +22,7 @@ def compile_results(frames, preds, df_filepath, threshold=0.5) -> list:
     df = pd.DataFrame(df_data, columns=["Frame No.", "Gesture Prediction"])
     df.to_csv(df_filepath, index=False)
 
-    return df_data
+    return df
 
 
 def visualize_prediction(input_video_path, output_video_path, preds_df):
