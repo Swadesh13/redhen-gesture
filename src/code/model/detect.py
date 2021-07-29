@@ -19,7 +19,7 @@ def compile_results(frames, preds, df_filepath, threshold=0.5):
     for [frame, d], result in zip(frames, preds):
         df_data.append([frame,  result[0] > threshold])
 
-    df = pd.DataFrame(df_data, columns=["Frame No.", "gesture"])
+    df = pd.DataFrame(df_data, columns=["frame", "gesture"])
     df.to_csv(df_filepath, index=False)
 
     return df
