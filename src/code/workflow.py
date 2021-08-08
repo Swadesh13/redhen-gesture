@@ -2,42 +2,70 @@ import argparse
 import os
 import subprocess
 import json
+import sys
 import numpy as np
+from math import ceil
 from datetime import datetime
 from time import time
+from config import MAX_CHANGE_RATIO, MAX_PERSONS, WINDOW_SIZE, MODEL_PATH, TRAIN_VAL_SPLIT
 from utils.video import ffprobe_video_info, get_fps_from_file
 from utils.paths import generate_video_paths
 from pose.openpose_base import run_openpose
 from pose.keypoints import get_keypoints
 from data.gestures_data import arrange_detect_data, arrange_train_data, generate_npy_data_detect, generate_npy_data_train, get_hand_movement_times
-from config import MAX_CHANGE_RATIO, MAX_PERSONS, WINDOW_SIZE, MODEL_PATH
 from model.detect import run_detection
+from model.train import train
 
-parser = argparse.ArgumentParser("Arguments for using OpenPose")
+parser = argparse.ArgumentParser()
 
-parser.add_argument("action", type=str, nargs=1,
-                    help="Whether train or detect or get openpose_help", choices=["train", "detect", "openpose_help"])
-parser.add_argument("--input_dir", type=str, nargs=1,
+subparser = parser.add_subparsers(dest="action",
+                                  help="Whether to train or detect")
+subparser.required = True
+
+# openpose_help_parser = subparser.add_parser("openpose_help")
+# openpose_help_parser.add_argument("--options", type=str, nargs='+',
+#                                   help='additional options to openpsoe help')
+
+train_parser = subparser.add_parser("train")
+train_parser.add_argument("--retrain", action='store_true', default=False,
+                          help="Retrain from a given model or default model.")
+train_parser.add_argument("--save_model", type=str, nargs=1,
+                          help="Path to save model after training.")
+train_parser.add_argument("--batch_size", type=int, nargs=1, default=[16],
+                          help="Path to save model after training.")
+train_parser.add_argument("--epochs", type=int, nargs=1, default=[20],
+                          help="Path to save model after training.")
+
+
+detect_parser = subparser.add_parser("detect")
+
+group1 = parser.add_mutually_exclusive_group(required=True)
+group1.add_argument("--input_dir", type=str, nargs=1,
                     help="input directory for one or more readable video files")
-parser.add_argument('--input_files', type=str, nargs='+',
+group1.add_argument('--input_files', type=str, nargs='+',
                     help="complete path to input files (one or more)")
+
 parser.add_argument('--elan_csv_files', type=str, nargs='+',
                     help="complete path to elan_csv files (one or more) in same order as input video files")
-parser.add_argument("--output_dir", type=str, nargs=1,
+parser.add_argument("--output_dir", type=str, nargs=1, required=True,
                     help="writable output directory for storing output/intermediate files")
-parser.add_argument("--window_size", type=int, nargs=1,
+parser.add_argument("--window_size", type=int, nargs=1, default=[WINDOW_SIZE],
                     help="Window Size for generating time-series data")
-parser.add_argument("--max_persons", type=int, nargs=1,
+parser.add_argument("--max_persons", type=int, nargs=1, default=[MAX_PERSONS],
                     help="max persons acceptable in a frame")
-parser.add_argument("--diff_ratio", type=float, nargs=1,
-                    help="Ratio of (height+width)/2 that will be maximum difference between consecutive frames for the same person")
-parser.add_argument("--detection_threshold", type=float, nargs=1, default=0.5,
+parser.add_argument("--diff_ratio", type=float, nargs=1, default=[MAX_CHANGE_RATIO],
+                    help="Ratio times (height+width)/2 that will be maximum difference between consecutive frames for the same person")
+parser.add_argument("--detection_threshold", type=float, nargs=1, default=[0.5],
                     help="max persons acceptable in a frame")
+parser.add_argument("--model_path", type=str, nargs=1,
+                    help="Path to model for training / detection.")
 
+if len(sys.argv) > 1:
+    args = parser.parse_args()
+else:
+    parser.error("No argument provided!")
 
-args = parser.parse_args()
-
-action = args.action[0]
+action = args.action
 
 if not (action == "openpose_help" or ((args.input_dir or args.input_files) and args.output_dir)):
     parser.error(
@@ -47,12 +75,13 @@ if args.input_dir and args.input_files:
     parser.error("input_dir and input_files cannot be used together.")
 
 if action == "train":
-    if (not args.input_files) ^ (not args.elan_csv_files):
-        parser.error("input_files requires elan_csv_files while training.")
-
     if args.input_files:
-        assert len(args.input_files) == len(args.elan_csv_files), \
-            "Number of video files != Number of elan csv files"
+        if args.elan_csv_files:
+            assert len(args.input_files) == len(args.elan_csv_files), \
+                "Number of video files != Number of elan csv files"
+        else:
+            parser.error("input_files requires elan_csv_files while training.")
+
 
 if args.window_size:
     WINDOW_SIZE = args.window_size[0]
@@ -169,6 +198,49 @@ if action == "train":
                 print(f"[{dt}] Created train npy file at {npy_file}")
     print(f"Completed data generation for {len(train_data_paths)} files")
 
+    split = ceil(TRAIN_VAL_SPLIT*len(train_data_paths))
+    train_files = train_data_paths[:split]
+    val_files = None
+    if split < len(train_data_paths):
+        val_files = train_data_paths[split:]
+    x_train, y_train, x_val, y_val = [], [], [], []
+    if args.model_path:
+        MODEL_PATH = args.model_path[0]
+
+    for video_dir, train_data_path in zip(output_video_dirs_list, train_files):
+        output_video_filename = os.path.basename(video_dir)
+        with open(train_data_path, "rb") as npf:
+            data = np.load(npf, allow_pickle=True)
+        for frame, d, lb in data:
+            # 1 channel required
+            x_train.append(np.array([d], dtype=np.float32))
+            y_train.append(lb)
+    x_train = np.array(x_train, dtype=np.float32)
+    y_train = np.array(y_train, dtype=np.int)
+
+    if val_files:
+        for video_dir, val_data_path in zip(output_video_dirs_list, val_files):
+            output_video_filename = os.path.basename(video_dir)
+            with open(val_data_path, "rb") as npf:
+                data = np.load(npf, allow_pickle=True)
+            for frame, d, lb in data:
+                # 1 channel required
+                x_val.append(np.array([d], dtype=np.float32))
+                y_val.append(lb)
+        x_val = np.array(x_val, dtype=np.float32)
+        y_val = np.array(y_val, dtype=np.int)
+
+    if args.retrain:
+        MODEL_PATH = args.model_path
+    else:
+        MODEL_PATH = None
+
+    train(MODEL_PATH, args.retrain, x_train, y_train,
+          x_val, y_val, args.batch_size[0], args.epochs[0], output_dir)
+
+    print(f"Completed training for {len(detect_data_paths)} files")
+
+
 elif action == "detect":
     npy_files_path = os.path.join(output_dir, "npy_files")
     os.makedirs(npy_files_path, exist_ok=True)
@@ -205,7 +277,8 @@ elif action == "detect":
                                          f"{output_video_filename}_output.avi")
         pred_df_path = os.path.join(video_dir,
                                     f"{output_video_filename}_preds-df_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.csv")
-
+        if args.model_path:
+            MODEL_PATH = args.model_path[0]
         with open(detect_data_path, "rb") as npf:
             data = np.load(npf, allow_pickle=True)
         x = []

@@ -5,4 +5,5 @@ REQUIRED_KEYPOINTS = ["neck", "right shoulder", "right elbow", "right wrist",
                       "left shoulder", "left elbow", "left wrist", ]
 TRAIN_COLS = ["neck_x", "neck_y", "right shoulder_x", "right shoulder_y", "right elbow_x", "right elbow_y", "right wrist_x",
               "right wrist_y", "left shoulder_x", "left shoulder_y", "left elbow_x", "left elbow_y", "left wrist_x", "left wrist_y"]
-MODEL_PATH = "/opt/openpose/redhen-gesture/src/model.h5"
+MODEL_PATH = "/opt/openpose/redhen-gesture/src/models/best_model_w5_p6_c14.h5"
+TRAIN_VAL_SPLIT = 0.8
