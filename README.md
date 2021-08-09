@@ -12,5 +12,8 @@ The `src` directory contains all the code. There is a `code` directory for pytho
 * Changed access permissions of `/.openpose_env` to allow execution.
 * Changed the `/.openpose_env` to add the workflow.py file path.
 * Openpose searches for `models` directory at `OPENPOSE_SRC` i.e. base OpenPose folder. So, copied the directory `/home/opt/openpose_models` to `/home/opt/openpose/models`
-* Added the this github repo to `/home/opt/openpose/`.
-* Add `model.h5` to `/opt/openpose/redhen-gesture/src/model.h5` for detection / training.
+* Added this github repo to `/home/opt/openpose/`.
+
+## Structure of the Code
+
+Go to `src/code`. Workflow.py handles all input and outputs. Inside data, data related tasks such as arranging keypoints to numpy data is present in `gestures_data.py`. The model directory contains the training and detection code. The `pose` folder contains code to generate keypoints from OpenPose output in the `keypoints.py` file. `utils` contains some simple utility stuff. `config.py` includes the basic default configuration. `singularity`. `singularity` folder contains the basic def file on which the container is built and also the `.openpose_env` file, which contains an extra environment path to be added.

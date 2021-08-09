@@ -54,7 +54,7 @@ def gen_model(WINDOW_SIZE: int, MAX_PERSONS: int, CHANNELS: int = 1, lr: float =
 
 
 def train_model(model, x_train, y_train, x_val, y_val, batch_size, epochs, output_dir):
-    train_dir = f"{output_dir}/training_{int(time.time())}"
+    train_dir = os.path.join(output_dir, f"training_{int(time.time())}")
     os.makedirs(train_dir)
     early_stopping = tf.keras.callbacks.EarlyStopping(
         monitor="val_loss", patience=5, verbose=1)
