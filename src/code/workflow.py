@@ -29,8 +29,6 @@ subparser.required = True
 train_parser = subparser.add_parser("train")
 train_parser.add_argument("--retrain", action='store_true', default=False,
                           help="Retrain from a given model or default model.")
-train_parser.add_argument("--save_model", type=str, nargs=1,
-                          help="Path to save model after training.")
 train_parser.add_argument("--batch_size", type=int, nargs=1, default=[16],
                           help="Path to save model after training.")
 train_parser.add_argument("--epochs", type=int, nargs=1, default=[20],
@@ -176,9 +174,9 @@ if action == "train":
             video_info_file = os.path.join(video_dir,
                                            f"{output_video_filename}_info.json")
             npy_file = os.path.join(video_dir,
-                                    f"{output_video_filename}_npy_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
+                                    f"{output_video_filename}_npy-train_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
             npy_file_ = os.path.join(npy_files_path,
-                                     f"{output_video_filename}_npy_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
+                                     f"{output_video_filename}_npy-train_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
             if os.path.exists(npy_file) and os.path.exists(npy_file_):
                 train_data_paths.append(npy_file)
                 print(f"{npy_file} available")
@@ -235,7 +233,7 @@ if action == "train":
     else:
         MODEL_PATH = None
 
-    train(MODEL_PATH, args.retrain, x_train, y_train,
+    train(MODEL_PATH, x_train, y_train,
           x_val, y_val, args.batch_size[0], args.epochs[0], output_dir)
 
     print(f"Completed training for {len(detect_data_paths)} files")
@@ -249,9 +247,9 @@ elif action == "detect":
         video_info_file = os.path.join(video_dir,
                                        f"{output_video_filename}_info.json")
         npy_file = os.path.join(video_dir,
-                                f"{output_video_filename}_npy_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
+                                f"{output_video_filename}_npy-detect_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
         npy_file_ = os.path.join(npy_files_path,
-                                 f"{output_video_filename}_npy_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
+                                 f"{output_video_filename}_npy-detect_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.npy")
         if os.path.exists(npy_file) and os.path.exists(npy_file_):
             detect_data_paths.append(npy_file)
             print(f"{npy_file} available")
