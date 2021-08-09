@@ -214,7 +214,7 @@ if action == "train":
             x_train.append(np.array([d], dtype=np.float32))
             y_train.append(lb)
     x_train = np.array(x_train, dtype=np.float32)
-    y_train = np.array(y_train, dtype=np.int)
+    y_train = np.array(y_train, dtype=np.int8)
 
     if val_files:
         for video_dir, val_data_path in zip(output_video_dirs_list, val_files):
@@ -226,10 +226,10 @@ if action == "train":
                 x_val.append(np.array([d], dtype=np.float32))
                 y_val.append(lb)
         x_val = np.array(x_val, dtype=np.float32)
-        y_val = np.array(y_val, dtype=np.int)
+        y_val = np.array(y_val, dtype=np.int8)
 
     if args.retrain:
-        MODEL_PATH = args.model_path
+        MODEL_PATH = args.model_path if args.model_path else MODEL_PATH
     else:
         MODEL_PATH = None
 
