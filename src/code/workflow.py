@@ -229,14 +229,14 @@ if action == "train":
         y_val = np.array(y_val, dtype=np.int8)
 
     if args.retrain:
-        MODEL_PATH = args.model_path if args.model_path else MODEL_PATH
+        MODEL_PATH = args.model_path[0] if args.model_path else MODEL_PATH
     else:
         MODEL_PATH = None
 
     train(MODEL_PATH, x_train, y_train,
           x_val, y_val, args.batch_size[0], args.epochs[0], output_dir)
 
-    print(f"Completed training for {len(detect_data_paths)} files")
+    print(f"Completed training for {len(train_data_paths)} files")
 
 
 elif action == "detect":

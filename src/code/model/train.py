@@ -69,7 +69,7 @@ def train_model(model, x_train, y_train, x_val, y_val, batch_size, epochs, outpu
         y_train,
         batch_size=batch_size,
         epochs=epochs,
-        validation_data=(x_val, y_val) if x_val else None,
+        validation_data=(x_val, y_val) if len(x_val) else None,
         callbacks=[early_stopping, reduce_lr, save_model, tensorboard],
     )
 
