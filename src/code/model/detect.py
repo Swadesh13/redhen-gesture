@@ -1,3 +1,4 @@
+from typing import List
 import tensorflow as tf
 import numpy as np
 import pandas as pd
@@ -14,18 +15,55 @@ def detect_on_np_data(model, data):
     return model.predict(np.array(data, dtype=np.float32), batch_size=1, verbose=1)
 
 
+def smoothen_results(results: List, df: pd.DataFrame):
+    MAX_CONT_FALSE = 4
+    MIN_FRAMES_FOR_GESTURE = 4
+
+    fc = 0
+    tr = False
+    nfc = 0
+    start = 0
+    end = 0
+    preds = list(np.zeros((len(df)), dtype="int"))
+    for frame_r in results:
+        if frame_r[1]:
+            fc += 1
+            tr = True
+            nfc = 0
+            end = frame_r[0]
+            if not start:
+                start = frame_r[0] - 1
+        else:
+            if tr:
+                if nfc < MAX_CONT_FALSE:
+                    nfc += 1
+                else:
+                    if fc >= MIN_FRAMES_FOR_GESTURE:
+                        tr_li = list(df.loc[(df.frame >= start) &
+                                            (df.frame <= end)].index)
+                        for j in range(tr_li[0], tr_li[-1]+1):
+                            preds[j] = 1
+                    start = 0
+                    end = 0
+                    tr = False
+                    fc = 0
+                    nfc = 0
+    df["gesture"] = list(map(bool, preds))
+    return df
+
+
 def compile_results(frames, preds, df_filepath, threshold=0.5):
     df_data = []
     for [frame, d], result in zip(frames, preds):
         df_data.append([frame,  result[0] > threshold])
 
     df = pd.DataFrame(df_data, columns=["frame", "gesture"])
+    df = smoothen_results(df_data, df)
     df.to_csv(df_filepath, index=False)
-
     return df
 
 
-def visualize_prediction(input_video_path, output_video_path, preds_df):
+def visualize_prediction(input_video_path: str, output_video_path: str, preds_df: pd.DataFrame):
     cap = cv2.VideoCapture(input_video_path)
     frame_width = int(cap.get(3))
     frame_height = int(cap.get(4))
@@ -60,7 +98,7 @@ def visualize_prediction(input_video_path, output_video_path, preds_df):
     cap.release()
 
 
-def run_detection(model_path, data, frames, df_filepath, input_video_path, output_video_path, threshold=0.5):
+def run_detection(model_path: str, data: np.array, frames: np.array, df_filepath: str, input_video_path: str, output_video_path: str, threshold: float = 0.5):
     model = load_model(model_path)
     results = detect_on_np_data(model, data)
     preds = compile_results(frames, results, df_filepath, threshold)
