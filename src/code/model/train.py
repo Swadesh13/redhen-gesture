@@ -3,10 +3,10 @@ from typing import List
 import tensorflow as tf
 from tensorflow.keras import layers
 import numpy as np
-from config import REQUIRED_KEYPOINTS
+from config import TRAIN_COLS
 import time
 
-NO_COLS = len(REQUIRED_KEYPOINTS)
+NO_COLS = len(TRAIN_COLS)
 
 
 def load_model(filepath: str):
