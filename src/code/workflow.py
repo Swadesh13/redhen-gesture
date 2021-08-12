@@ -32,8 +32,9 @@ train_parser.add_argument("--retrain", action='store_true', default=False,
 train_parser.add_argument("--batch_size", type=int, nargs=1, default=[16],
                           help="Path to save model after training.")
 train_parser.add_argument("--epochs", type=int, nargs=1, default=[20],
-                          help="Path to save model after training.")
-
+                          help="Number of epochs for training.")
+train_parser.add_argument("--lr", type=float, nargs=1, default=[2e-4],
+                          help="Learning Rate")
 
 detect_parser = subparser.add_parser("detect")
 
@@ -234,7 +235,7 @@ if action == "train":
         MODEL_PATH = None
 
     train(MODEL_PATH, x_train, y_train,
-          x_val, y_val, args.batch_size[0], args.epochs[0], output_dir)
+          x_val, y_val, args.lr[0], args.batch_size[0], args.epochs[0], output_dir)
 
     print(f"Completed training for {len(train_data_paths)} files")
 
