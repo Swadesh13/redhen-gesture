@@ -59,8 +59,8 @@ def train_model(model, x_train, y_train, x_val, y_val, batch_size, epochs, outpu
             monitor="val_loss", patience=5, verbose=1)
         reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
             monitor="val_loss", patience=10, verbose=1, factor=0.5)
-        save_model = tf.keras.callbacks.ModelCheckpoint(
-            os.path.join(train_dir, "best_model_{epoch}.h5"))
+        save_model = tf.keras.callbacks.ModelCheckpoint(os.path.join(train_dir, "best_model_{epoch}_{accuracy:.3f}.h5"),
+                                                        monitor="val_accuracy", mode="max", verbose=1, save_best_only=True)
         tensorboard = tf.keras.callbacks.TensorBoard(
             log_dir=os.path.join(train_dir, "logs"))
 
@@ -77,8 +77,8 @@ def train_model(model, x_train, y_train, x_val, y_val, batch_size, epochs, outpu
             monitor="loss", patience=5, verbose=1)
         reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
             monitor="loss", patience=10, verbose=1, factor=0.5)
-        save_model = tf.keras.callbacks.ModelCheckpoint(
-            os.path.join(train_dir, "best_model_{epoch}.h5"))
+        save_model = tf.keras.callbacks.ModelCheckpoint(os.path.join(train_dir, "best_model_{epoch}_{accuracy:.3f}.h5"),
+                                                        monitor="accuracy", mode="max", verbose=1, save_best_only=True)
         tensorboard = tf.keras.callbacks.TensorBoard(
             log_dir=os.path.join(train_dir, "logs"))
         model.fit(
