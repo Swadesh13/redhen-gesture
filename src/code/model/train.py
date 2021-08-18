@@ -53,15 +53,16 @@ def gen_model(WINDOW_SIZE: int, MAX_PERSONS: int, CHANNELS: int = 1):
 def train_model(model, x_train, y_train, x_val, y_val, batch_size, epochs, output_dir):
     train_dir = os.path.join(output_dir, f"training_{int(time.time())}")
     os.makedirs(train_dir)
+    print("Saving training logs and models at", train_dir)
     if len(x_val):
         early_stopping = tf.keras.callbacks.EarlyStopping(
             monitor="val_loss", patience=5, verbose=1)
         reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
             monitor="val_loss", patience=10, verbose=1, factor=0.5)
-        save_model = tf.keras.callbacks.ModelCheckpoint(f"{train_dir}/best_model.h5",
-                                                        monitor="val_precision", mode="max", verbose=1, save_best_only=True)
+        save_model = tf.keras.callbacks.ModelCheckpoint(
+            os.path.join(train_dir, "best_model_{epoch}.h5"))
         tensorboard = tf.keras.callbacks.TensorBoard(
-            log_dir=f"{train_dir}/logs/")
+            log_dir=os.path.join(train_dir, "logs"))
 
         model.fit(
             x_train,
@@ -76,10 +77,10 @@ def train_model(model, x_train, y_train, x_val, y_val, batch_size, epochs, outpu
             monitor="loss", patience=5, verbose=1)
         reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
             monitor="loss", patience=10, verbose=1, factor=0.5)
-        save_model = tf.keras.callbacks.ModelCheckpoint(f"{train_dir}/best_model.h5",
-                                                        monitor="precision", mode="max", verbose=1, save_best_only=True)
+        save_model = tf.keras.callbacks.ModelCheckpoint(
+            os.path.join(train_dir, "best_model_{epoch}.h5"))
         tensorboard = tf.keras.callbacks.TensorBoard(
-            log_dir=f"{train_dir}/logs/")
+            log_dir=os.path.join(train_dir, "logs"))
         model.fit(
             x_train,
             y_train,
