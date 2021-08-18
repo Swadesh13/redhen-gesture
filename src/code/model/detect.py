@@ -16,9 +16,8 @@ def detect_on_np_data(model, data):
 
 
 def smoothen_results(results: List, df: pd.DataFrame):
-    MAX_CONT_FALSE = 4
+    MAX_CONT_FALSE = 7
     MIN_FRAMES_FOR_GESTURE = 4
-
     fc = 0
     tr = False
     nfc = 0
