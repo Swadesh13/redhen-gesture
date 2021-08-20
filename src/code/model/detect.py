@@ -69,7 +69,7 @@ def visualize_prediction(input_video_path: str, output_video_path: str, preds_df
     frame_width = int(cap.get(3))
     frame_height = int(cap.get(4))
     fps = int(cap.get(cv2.CAP_PROP_FPS))
-    writer = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'PIM1'),
+    writer = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'),
                              fps, (frame_width, frame_height))
     ind = 0
     count = 0
@@ -100,7 +100,7 @@ def visualize_prediction(input_video_path: str, output_video_path: str, preds_df
 
 
 def add_audio(v_path: str, orig_va_path: str):
-    audio_path = os.path.splitext(v_path)[0]+".mp3"
+    audio_path = os.path.splitext(orig_va_path)[0]+"_audio.mp3"
     ext = os.path.splitext(v_path)[1]
     audio_extract_args = (
         "ffmpeg", "-y", "-i", f"{orig_va_path}", "-vn", "-acodec", "libmp3lame", f"{audio_path}")
