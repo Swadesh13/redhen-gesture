@@ -68,7 +68,7 @@ def visualize_prediction(input_video_path: str, output_video_path: str, preds_df
     cap = cv2.VideoCapture(input_video_path)
     frame_width = int(cap.get(3))
     frame_height = int(cap.get(4))
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    fps = cap.get(cv2.CAP_PROP_FPS)
     writer = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'),
                              fps, (frame_width, frame_height))
     ind = 0
