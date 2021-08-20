@@ -6,7 +6,7 @@ def generate_video_paths(file_: str, output_dir: str, WINDOW_SIZE: int, MAX_PERS
     output_video_filename = os.path.splitext(file_)[0]
     output_video_dir = os.path.join(output_dir, output_video_filename)
     output_video_path = os.path.join(output_video_dir,
-                                     f"{output_video_filename}.avi")
+                                     f"{output_video_filename}.mp4")
     video_info_path = os.path.join(output_video_dir,
                                    f"{output_video_filename}_info.json")
     output_json_dir = os.path.join(output_video_dir,
