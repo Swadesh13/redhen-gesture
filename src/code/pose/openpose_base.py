@@ -42,6 +42,6 @@ def run_openpose(file_: str, file_path: str, output_video_path: str, output_json
     err = popen.stderr.read()
     if err:
         print(err.decode())
-        return False
+        # return False
     print()
     return True
