@@ -103,7 +103,7 @@ def add_audio(v_path: str, orig_va_path: str):
     audio_path = os.path.splitext(v_path)[0]+".mp3"
     ext = os.path.splitext(v_path)[1]
     audio_extract_args = (
-        "ffmpeg", "-i", f"{orig_va_path}", "-vn", "-acodec", "libmp3lame", f"{audio_path}")
+        "ffmpeg", "-y", "-i", f"{orig_va_path}", "-vn", "-acodec", "libmp3lame", f"{audio_path}")
     popen1 = subprocess.Popen(audio_extract_args, stderr=subprocess.PIPE)
     popen1.wait()
     err = popen1.stderr.read()
@@ -111,7 +111,7 @@ def add_audio(v_path: str, orig_va_path: str):
         print(err.decode())
     v_path_ = os.path.splitext(v_path)[0]+"_"+ext
     os.rename(f"{v_path}", f"{v_path_}")
-    audio_merge_args = ("ffmpeg", "-fflags", "+genpts", "-i",
+    audio_merge_args = ("ffmpeg", "-y", "-fflags", "+genpts", "-i",
                         f"{v_path_}", "-i", f"{audio_path}", "-c:v", "copy", "-c:a", "aac", f"{v_path}")
     popen2 = subprocess.Popen(audio_merge_args, stderr=subprocess.PIPE)
     popen2.wait()
