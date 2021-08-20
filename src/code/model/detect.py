@@ -118,6 +118,7 @@ def add_audio(v_path: str, orig_va_path: str):
     err = popen2.stderr.read()
     if err:
         print(err.decode())
+    os.remove(v_path_)
 
 
 def run_detection(model_path: str, data: np.array, frames: np.array, df_filepath: str, input_video_path: str, output_video_path: str, threshold: float = 0.5):
