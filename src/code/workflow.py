@@ -271,9 +271,9 @@ elif action == "detect":
     for video_dir, detect_data_path in zip(output_video_dirs_list, detect_data_paths):
         output_video_filename = os.path.basename(video_dir)
         openpose_video_path = os.path.join(video_dir,
-                                           f"{output_video_filename}.avi")
+                                           f"{output_video_filename}.mp4")
         output_video_path = os.path.join(video_dir,
-                                         f"{output_video_filename}_output.avi")
+                                         f"{output_video_filename}_output.mp4")
         pred_df_path = os.path.join(video_dir,
                                     f"{output_video_filename}_preds-df_w{WINDOW_SIZE}_p{MAX_PERSONS}_r{MAX_CHANGE_RATIO}.csv")
         if args.model_path:
