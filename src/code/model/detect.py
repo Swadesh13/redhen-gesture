@@ -1,8 +1,10 @@
+import os
 from typing import List
 import tensorflow as tf
 import numpy as np
 import pandas as pd
 import cv2
+import subprocess
 
 
 def load_model(filepath: str):
@@ -17,7 +19,7 @@ def detect_on_np_data(model, data):
 
 def smoothen_results(results: List, df: pd.DataFrame):
     MAX_CONT_FALSE = 7
-    MIN_FRAMES_FOR_GESTURE = 4
+    MIN_FRAMES_FOR_GESTURE = 3
     fc = 0
     tr = False
     nfc = 0
@@ -29,9 +31,9 @@ def smoothen_results(results: List, df: pd.DataFrame):
             fc += 1
             tr = True
             nfc = 0
-            end = frame_r[0]
+            end = frame_r[0] + 1
             if not start:
-                start = frame_r[0] - 1
+                start = frame_r[0] - 2
         else:
             if tr:
                 if nfc < MAX_CONT_FALSE:
@@ -86,8 +88,8 @@ def visualize_prediction(input_video_path: str, output_video_path: str, preds_df
                 scale = 1
                 t_size = cv2.getTextSize(
                     label, 0, fontScale=scale, thickness=1)[0]
-                out = cv2.rectangle(
-                    out, (x1, y1), (x1+t_size[0], y1-t_size[1]-5), (128, 128, 0), -1, cv2.LINE_AA, )
+                out = cv2.rectangle(out, (x1, y1), (x1+t_size[0], y1-t_size[1]-5),
+                                    (128, 128, 0), -1, cv2.LINE_AA)
                 out = cv2.putText(out, label, (x1, y1-5), 0,
                                   scale, (255, 255, 255), 1, cv2.LINE_AA)
         writer.write(out)
@@ -97,8 +99,30 @@ def visualize_prediction(input_video_path: str, output_video_path: str, preds_df
     cap.release()
 
 
+def add_audio(v_path: str, orig_va_path: str):
+    audio_path = os.path.splitext(v_path)[0]+".mp3"
+    ext = os.path.splitext(v_path)[1]
+    audio_extract_args = (
+        "ffmpeg", "-i", f"{orig_va_path}", "-vn", "-acodec", "libmp3lame", f"{audio_path}")
+    popen1 = subprocess.Popen(audio_extract_args, stderr=subprocess.PIPE)
+    popen1.wait()
+    err = popen1.stderr.read()
+    if err:
+        print(err.decode())
+    v_path_ = os.path.splitext(v_path)[0]+"_"+ext
+    os.rename(f"{v_path}", f"{v_path_}")
+    audio_merge_args = ("ffmpeg", "-fflags", "+genpts", "-i",
+                        f"{v_path_}", "-i", f"{audio_path}", "-c:v", "copy", "-c:a", "aac", f"{v_path}")
+    popen2 = subprocess.Popen(audio_merge_args, stderr=subprocess.PIPE)
+    popen2.wait()
+    err = popen2.stderr.read()
+    if err:
+        print(err.decode())
+
+
 def run_detection(model_path: str, data: np.array, frames: np.array, df_filepath: str, input_video_path: str, output_video_path: str, threshold: float = 0.5):
     model = load_model(model_path)
     results = detect_on_np_data(model, data)
     preds = compile_results(frames, results, df_filepath, threshold)
     visualize_prediction(input_video_path, output_video_path, preds)
+    add_audio(output_video_path, input_video_path)

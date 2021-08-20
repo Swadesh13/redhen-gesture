@@ -36,7 +36,7 @@ def run_openpose(file_: str, file_path: str, output_video_path: str, output_json
     dt = datetime.fromtimestamp(int(time()))
     print(f"[{dt}] Running OpenPose on {file_}. Get the output video file at {output_video_path} and json files at {output_json_dir}")
     openpose_args = (f"{OPENPOSE_BIN}", "--video", f"{file_path}", "--display", "0",
-                     "--write-video", f"{output_video_path}", "--write-json", f"{output_json_dir}")
+                     "--write-video", f"{output_video_path}", "--write_video_with_audio", "--write-json", f"{output_json_dir}")
     popen = subprocess.Popen(openpose_args, stderr=subprocess.PIPE)
     popen.wait()
     err = popen.stderr.read()
