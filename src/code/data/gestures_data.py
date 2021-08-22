@@ -5,13 +5,11 @@ from config import REQUIRED_KEYPOINTS
 from pose.openpose_base import BODY_25_JOINTS
 
 
-def get_csv_file(filepath: str):
-    df = pd.read_csv(filepath)
-    return df
-
-
 def get_hand_movement_times(filepath: str) -> List[Tuple]:
-    df = get_csv_file(filepath)
+    """
+    Load CSV file and extract hand movement time ranges. Must have columns 'Begin Time - msec' and 'End Time - msec'.
+    """
+    df = pd.read_csv(filepath)
     columns = list(df.columns)
     b_ind = columns.index('Begin Time - msec')
     e_ind = columns.index('End Time - msec')
@@ -20,6 +18,9 @@ def get_hand_movement_times(filepath: str) -> List[Tuple]:
 
 
 def generate_dummy_keypoints() -> Dict:
+    """
+    Generate dummy keypoints for frames with less than Max Persons. Dense layers require all frames to have same dimensions.
+    """
     dummy = {}
     for joint in BODY_25_JOINTS:
         dummy[joint] = [-1.0, -1.0, -1.0]
@@ -27,6 +28,9 @@ def generate_dummy_keypoints() -> Dict:
 
 
 def arrange_train_data(keypoints: Dict, beg_end_times: List[Tuple], fps: float, MAX_PERSONS: int) -> Dict:
+    """
+    Arrange data into frames. Add gestures present or not based on time ranges. Generate each frame and also, add dummy when necessary.
+    """
     data = {}
     for key in keypoints.keys():
         persons = list(keypoints[key].keys())
@@ -43,7 +47,7 @@ def arrange_train_data(keypoints: Dict, beg_end_times: List[Tuple], fps: float, 
         # dummy to always have MAX_PERSONS (training to be done in matrices (Required_keypoints x Max_persons x window))
         dummy = generate_dummy_keypoints()
         dummy_frames_list = []
-        for j in range(start_frame, end_frame+1):
+        for _ in range(start_frame, end_frame+1):
             dummy_frames_list.append(dummy)
 
         for i in range(MAX_PERSONS - count_persons):
@@ -87,6 +91,9 @@ def arrange_train_data(keypoints: Dict, beg_end_times: List[Tuple], fps: float, 
 
 
 def arrange_detect_data(keypoints: Dict, MAX_PERSONS: int) -> Dict:
+    """
+    Same as train data. But not gesture in this case
+    """
     data = {}
     for key in keypoints.keys():
         persons = list(keypoints[key].keys())
@@ -101,7 +108,7 @@ def arrange_detect_data(keypoints: Dict, MAX_PERSONS: int) -> Dict:
         # dummy to always have MAX_PERSONS (training to be done in matrices (Required_keypoints x Max_persons x window))
         dummy = generate_dummy_keypoints()
         dummy_frames_list = []
-        for j in range(start_frame, end_frame+1):
+        for _ in range(start_frame, end_frame+1):
             dummy_frames_list.append(dummy)
 
         for i in range(MAX_PERSONS - count_persons):
@@ -120,6 +127,9 @@ def arrange_detect_data(keypoints: Dict, MAX_PERSONS: int) -> Dict:
 
 
 def generate_npy_data_train(data: Dict, WINDOW_SIZE: int, ):
+    """
+    Arrange into windows. Form Numpy data.
+    """
     npy_data = []
     for key in data.keys():
         for frame in list(data[key].keys())[:-WINDOW_SIZE+1]:
@@ -141,6 +151,9 @@ def generate_npy_data_train(data: Dict, WINDOW_SIZE: int, ):
 
 
 def generate_npy_data_detect(data: Dict, WINDOW_SIZE: int, ):
+    """
+    Arrange into windows. Form Numpy data. No gesture data.
+    """
     npy_data = []
     for key in data.keys():
         for frame in list(data[key].keys())[:-WINDOW_SIZE+1]:

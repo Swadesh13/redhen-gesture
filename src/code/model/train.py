@@ -10,10 +10,16 @@ NO_COLS = len(TRAIN_COLS)
 
 
 def load_model(filepath: str):
+    """
+    Load Keras model using tf.keras load_model() from filepath
+    """
     return tf.keras.models.load_model(filepath)
 
 
 def gen_model(WINDOW_SIZE: int, MAX_PERSONS: int, CHANNELS: int = 1):
+    """
+    Best performing architecture on the given data. Uses Tf keras layers.
+    """
     inp = layers.Input(shape=(CHANNELS, WINDOW_SIZE, MAX_PERSONS, NO_COLS))
     x = layers.ConvLSTM2D(filters=32, kernel_size=(3, 3), padding="same", return_sequences=True,
                           activation="relu", data_format="channels_first", go_backwards=True)(inp)
@@ -51,6 +57,9 @@ def gen_model(WINDOW_SIZE: int, MAX_PERSONS: int, CHANNELS: int = 1):
 
 
 def train_model(model, x_train, y_train, x_val, y_val, batch_size, epochs, output_dir):
+    """
+    Performing model fit. Also, add callbacks. Val data may or may not be None.
+    """
     train_dir = os.path.join(output_dir, f"training_{int(time.time())}")
     os.makedirs(train_dir)
     print("Saving training logs and models at", train_dir)
@@ -91,6 +100,9 @@ def train_model(model, x_train, y_train, x_val, y_val, batch_size, epochs, outpu
 
 
 def train(MODEL_PATH, x_train, y_train, x_val, y_val, learning_rate, batch_size, epochs, output_dir):
+    """
+    Coordinate all training function calls.
+    """
     window_size = x_train.shape[2]
     max_persons = x_train.shape[3]
     if MODEL_PATH:

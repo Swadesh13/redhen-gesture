@@ -3,6 +3,11 @@ from typing import Tuple
 
 
 def generate_video_paths(file_: str, output_dir: str, WINDOW_SIZE: int, MAX_PERSONS: int, MAX_CHANGE_RATIO: float) -> Tuple[str, str, str, str, str, str]:
+    """
+    Generate necessary paths.
+
+    *Not quite necessary currently. But can be upgraded to handle all path related activites in the code, specially in workflow.py
+    """
     output_video_filename = os.path.splitext(file_)[0]
     output_video_dir = os.path.join(output_dir, output_video_filename)
     output_video_path = os.path.join(output_video_dir,

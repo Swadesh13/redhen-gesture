@@ -2,7 +2,7 @@
 
 This is the repository for all the code that was ceated during the GSoC 2021 at Red Hen Lab for the project topic "Red Hen Open Dataset for gestures with performance baselines at Red Hen Lab".
 
-For more info on the work and some information / documentations on Singularity and HPC, check my blog @ [swadesh13.github.io/gestures-dataset-blog](https://swadesh13.github.io/gestures-dataset-blog)
+For more info on the work and some information / How to use / documentations on Singularity and HPC, check my blog @ [swadesh13.github.io/gestures-dataset-blog](https://swadesh13.github.io/gestures-dataset-blog)
 
 The OpenPose container used in this project is derived from `frankierr/openpose_containers:focal_nvcaffe` at Docker. (Check the `singularity.df` file for reference). `workflow.py` file works as the entry to all the code and handles all the tasks.
 

@@ -33,6 +33,9 @@ BODY_25_JOINTS = [
 
 
 def run_openpose(file_: str, file_path: str, output_video_path: str, output_json_dir: str, OPENPOSE_BIN: str, ):
+    """
+    Runs OpenPose on the video. OpenPose binary present at OPENPOSE_BIN.
+    """
     dt = datetime.fromtimestamp(int(time()))
     print(f"[{dt}] Running OpenPose on {file_}. Get the output video file at {output_video_path} and json files at {output_json_dir}")
     openpose_args = (f"{OPENPOSE_BIN}", "--video", f"{file_path}", "--display", "0",

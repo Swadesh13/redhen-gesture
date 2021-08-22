@@ -8,16 +8,27 @@ import subprocess
 
 
 def load_model(filepath: str):
+    """
+    Load Keras model using tf.keras load_model() from filepath
+    """
     return tf.keras.models.load_model(filepath)
 
 
 def detect_on_np_data(model, data):
+    """
+    Run model prediction on the given data. Data is channel first by default.
+    """
     assert model.input_shape[2:] == np.array(data).shape[2:], \
         "model input shape and data shape do not match!"
     return model.predict(np.array(data, dtype=np.float32), batch_size=1, verbose=1)
 
 
 def smoothen_results(results: List, df: pd.DataFrame):
+    """
+    Reduce number of false predictions.
+    For example, 2 gestures seperated by 2-3 frames means 1 continuous gesture.
+    Also, gesture predicted for 1-2 frames may mean false positive.
+    """
     MAX_CONT_FALSE = 7
     MIN_FRAMES_FOR_GESTURE = 3
     fc = 0
@@ -54,6 +65,9 @@ def smoothen_results(results: List, df: pd.DataFrame):
 
 
 def compile_results(frames, preds, df_filepath, threshold=0.5):
+    """
+    Form a DataFrame from predictions by model. Results > threshold considered positive else negative
+    """
     df_data = []
     for [frame, d], result in zip(frames, preds):
         df_data.append([frame,  result[0] > threshold])
@@ -65,6 +79,9 @@ def compile_results(frames, preds, df_filepath, threshold=0.5):
 
 
 def visualize_prediction(input_video_path: str, output_video_path: str, preds_df: pd.DataFrame):
+    """
+    Label frames if they contain gestures. Uses cv2 VideoCapture and VideoWriter.
+    """
     cap = cv2.VideoCapture(input_video_path)
     frame_width = int(cap.get(3))
     frame_height = int(cap.get(4))
@@ -100,6 +117,9 @@ def visualize_prediction(input_video_path: str, output_video_path: str, preds_df
 
 
 def add_audio(v_path: str, orig_va_path: str):
+    """
+    cv2 doesn't add audio alongwith the frames. Seperately need to do that using FFmpeg.
+    """
     audio_path = os.path.splitext(orig_va_path)[0]+"_audio.mp3"
     ext = os.path.splitext(v_path)[1]
     audio_extract_args = (
@@ -122,6 +142,9 @@ def add_audio(v_path: str, orig_va_path: str):
 
 
 def run_detection(model_path: str, data: np.array, frames: np.array, df_filepath: str, input_video_path: str, output_video_path: str, threshold: float = 0.5):
+    """
+    Coordinate all detection function calls.
+    """
     model = load_model(model_path)
     results = detect_on_np_data(model, data)
     preds = compile_results(frames, results, df_filepath, threshold)

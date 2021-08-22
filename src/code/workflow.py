@@ -16,6 +16,7 @@ from data.gestures_data import arrange_detect_data, arrange_train_data, generate
 from model.detect import run_detection
 from model.train import train
 
+# Command-Line Arguments
 parser = argparse.ArgumentParser()
 
 subparser = parser.add_subparsers(dest="action",
@@ -59,6 +60,7 @@ parser.add_argument("--detection_threshold", type=float, nargs=1, default=[0.5],
 parser.add_argument("--model_path", type=str, nargs=1,
                     help="Path to model for training / detection.")
 
+# Argument parsing and validation
 if len(sys.argv) > 1:
     args = parser.parse_args()
 else:

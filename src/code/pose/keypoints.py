@@ -7,6 +7,9 @@ from .openpose_base import BODY_25_JOINTS
 
 
 def get_body_25_keypoints_from_json(filename: str) -> List[Dict]:
+    """
+    Load keypoints from OpenPose output JSON files. Also, removes confidence scores and keeps only necessary keypoints data.
+    """
     with open(filename) as jsonf:
         try:
             keypoints = json.load(jsonf)
@@ -28,6 +31,9 @@ def get_body_25_keypoints_from_json(filename: str) -> List[Dict]:
 
 
 def get_all_keypoints(folder: str, MAX_PERSONS: int) -> Dict:
+    """
+    Load all frames keypoints. Form a dict.
+    """
     json_files = os.listdir(folder)
     all_keypoints = {}
     for jfile in json_files:
@@ -45,8 +51,10 @@ def get_all_keypoints(folder: str, MAX_PERSONS: int) -> Dict:
     return all_keypoints
 
 
-# Divide on the basis of missing frames (due to multiple persons with no gesture annotations)
 def divide_keypoints_fn(keypoints: Dict, WINDOW_SIZE: int) -> Dict:
+    """
+    Divide on the basis of missing frames (due to multiple persons with no gesture annotations)
+    """
     keys = list(sorted(keypoints.keys()))
     gestures_dict = {}
     gesture_fn = []
@@ -71,8 +79,10 @@ def divide_keypoints_fn(keypoints: Dict, WINDOW_SIZE: int) -> Dict:
     return gestures_dict
 
 
-# Divide on the basis of count of perons in the frame (change of persons -> change in frame)
 def divide_keypoints_count(keypoints: Dict, WINDOW_SIZE: int) -> Dict:
+    """
+    Divide on the basis of count of perons in the frame (change of persons -> change in frame)
+    """
     keys = list(keypoints.keys())
     gestures_dict = {}
     gesture_fn = []
@@ -102,7 +112,7 @@ def divide_keypoints_count(keypoints: Dict, WINDOW_SIZE: int) -> Dict:
 
 # Divide on the basis of count of relative positions of perons in the frame
 # (change of hand / body position more than a margin -> change in shot / different person)
-# For now, Relative to 1 person only
+# For now, Relative to 1 person is considered sufficient.
 
 
 def check_frames_continuous(keypoint1: Dict, keypoint2: List, max_diff: float) -> Tuple[bool, int]:
@@ -117,6 +127,9 @@ def check_frames_continuous(keypoint1: Dict, keypoint2: List, max_diff: float) -
 
 
 def divide_keypoints_position(keypoints: Dict, video_info: Dict, WINDOW_SIZE: int, MAX_CHANGE_RATIO: float) -> Dict:
+    """
+    Check poisiton of keypoints in 2 frames. Threshold determines if continuous frames or shot/angle is changed.
+    """
     keys = list(keypoints.keys())
     gestures_dict = {}
     gesture_fn = []
@@ -147,8 +160,10 @@ def divide_keypoints_position(keypoints: Dict, video_info: Dict, WINDOW_SIZE: in
     return gestures_dict
 
 
-# Arrange the keypoints per person (again compare the neck and nose keypoints)
 def arrange_persons(keypoints: Dict, video_info: Dict, MAX_CHANGE_RATIO: float) -> Dict:
+    """
+    Arrange the keypoints per person (again compare the neck and nose keypoints)
+    """
     keys = list(keypoints.keys())
     gestures_dict = {}
     gesture_fn = []
@@ -198,6 +213,9 @@ def arrange_persons(keypoints: Dict, video_info: Dict, MAX_CHANGE_RATIO: float) 
 
 
 def get_keypoints(output_json_dir: str, keypoints_path: str, video_info: Dict, WINDOW_SIZE: int, MAX_PERSONS: int, MAX_CHANGE_RATIO: float):
+    """
+    Coordinates all keypoint handling functions
+    """
     keypoints = get_all_keypoints(output_json_dir, MAX_PERSONS)
     dkt = divide_keypoints_fn(keypoints, WINDOW_SIZE)
     dkc = divide_keypoints_count(dkt, WINDOW_SIZE)
